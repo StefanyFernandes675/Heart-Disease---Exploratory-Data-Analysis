@@ -1,0 +1,96 @@
+# Definir a pasta de trabalho
+setwd("C:\\HDD")
+
+# Importar a base de dados para um dataframe
+df_HDD <- read.csv("heart.csv")
+
+# Visualizar o dataframe
+View(df_HDD)
+
+# Realizar a correlação de Pearson (correlação linear) no dataframe df_HDD
+corrplot(cor(df_HDD), type="upper")
+
+# Excluindo as váriáveis restecg, fbs e chol
+df_HDD <- subset(df_HDD, select=c(-restecg, -chol,-fbs))
+
+# Alterando o valor das variáveis categóricas para valores mais significativos
+df_HDD$sex[df_HDD$sex == 0] = "feminino"
+df_HDD$sex[df_HDD$sex == 1] = "masculino"
+
+df_HDD$cp[df_HDD$cp == 0] = "angina típica"
+df_HDD$cp[df_HDD$cp == 1] = "angina atípica"
+df_HDD$cp[df_HDD$cp == 2] = "dor não agina"
+df_HDD$cp[df_HDD$cp == 3] = "assintomático"
+
+df_HDD$exang[df_HDD$exang == 0] = "não"
+df_HDD$exang[df_HDD$exang == 1] = "sim"
+
+df_HDD$slope[df_HDD$slope == 0] = "inclinação para cima"
+df_HDD$slope[df_HDD$slope == 1] = "flat"
+df_HDD$slope[df_HDD$slope == 2] = "inclinação para baixo"
+
+df_HDD$thal[df_HDD$thal == 1] = "normal"
+df_HDD$thal[df_HDD$thal == 2] = "defeito fixo"
+df_HDD$thal[df_HDD$thal == 3] = "defeito reversível"
+
+df_HDD$target1 = df_HDD$target
+df_HDD$target1[df_HDD$target1 == 0] = "sem doença cardíaca"
+df_HDD$target1[df_HDD$target1 == 1] = "com doença cardíaca"
+
+View(df_HDD)
+
+# Pergunta 1: Qual o percentual de pessoas com e sem doença cardíaca?
+round(prop.table(table(df_HDD$target1)),2)
+
+# Pergunta 2: Qual a distribuição da idade da população?
+library(ggplot2)
+ggplot(df_HDD, aes(x=age)) + geom_histogram() + ggtitle("Distribuição da idade da população") + xlab("Idade") + ylab("Densidade")
+
+# Pergunta 3: Qual o número de pessoas com doenças cardíacas em cada faixa etária?
+df_HDD$age_group = cut(df_HDD$age, breaks = seq(25, 77, 4))
+library(tidyverse)
+target_by_age = df_HDD %>%
+  group_by(age_group) %>%
+  summarise(df_HDD_disease = sum(target))
+target_by_age
+
+target_by_age %>%
+  ggplot(aes(x=age_group, y=df_HDD_disease)) +
+  geom_bar(stat="identity", fill="#f68060", alpha=.6, width=.4) +
+  xlab("") + ylab("Qtde de pessoas com doença cardíaca") + ggtitle("Número de pessoas com doença cardíaca por faixa etária") + theme_bw()
+
+prop_in_age = df_HDD %>%
+  group_by(age_group) %>%
+  summarise(heart_disease_proportion = round(sum(target)/n(), 3)*100)
+prop_in_age
+
+prop_in_age %>%
+  ggplot(aes(x=age_group, y=heart_disease_proportion)) +
+  geom_bar(stat="identity", fill="#f68060", alpha=.6, width=.4) +
+  xlab("Faixa etária") + ylab("Pessoas com doença cardíaca") + ggtitle("Proporção de doença cardíaca por faixa etária") + theme_bw()
+
+# Pergunta 3: Qual o número de pessoas em cada sexo biológico?
+round(prop.table(table(df_HDD$sex)),2)
+round(prop.table(table(df_HDD$sex, df_HDD$target1)), 2)
+
+#Pergunta 4: Qual a variação do segmento ST?
+ggplot(df_HDD, aes(x= slope, fill=target1)) + geom_bar(position = 'dodge') + xlab("Tipo de variação") + ylab("Quantidade") + ggtitle("Análise do tipo de Variação") + scale_fill_discrete(name = "Doença cardíaca", labels = c("Não", "Sim"))
+
+male_data = df_HDD[df_HDD$sex=="masculino",]
+female_data = df_HDD[df_HDD$sex=="feminino",]
+
+ggplot(male_data, aes(x= slope, fill=target1)) + geom_bar(position = 'dodge') + xlab("Tipo de variação") + ylab("Quantidade") + ggtitle("Análise dos tipos de variação para homens") + scale_fill_discrete(name = "Doença cardíaca", labels = c("Não", "Sim"))
+ggplot(female_data, aes(x= slope, fill=target1)) + geom_bar(position = 'dodge') + xlab("Tipo de variação") + ylab("Quantidade") + ggtitle("Análise dos tipos de variação para mulheres") + scale_fill_discrete(name = "Doença cardíaca", labels = c("Não", "Sim"))
+
+# Pergunta 5: Qual o número de vasos principais?
+mosaicplot(table(df_HDD$target1, df_HDD$ca), col=c("#754869", "coral", "skyblue", "#423f42", "#ed18c6"), las=1, main="Cardiopatias para os Vasos Principais")
+mosaicplot(table(male_data$target1, male_data$ca), col=c("#754869", "coral", "skyblue", "#423f42", "#ed18c6"), las=1, main="Vasos principais em homens")
+mosaicplot(table(female_data$target1, female_data$ca), col=c("#754869", "coral", "skyblue", "#423f42", "#ed18c6"), las=1, main="Vasos principais em mulheres")
+
+# Pergunta 6: Depressão de ST induzida por exercício em relação ao repouso (oldpeak)
+ggplot(df_HDD, aes(x = target1, y = oldpeak)) + ylab("Depressão ST") + xlab("Estado da doença cardíaca")+ ggtitle("Depressão de ST induzida por Exercício vs Cardiopatia") + geom_boxplot()
+ggplot(df_HDD, aes(x = age, y = oldpeak, color=target1, size = factor(oldpeak))) + geom_point(alpha=0.3) + labs(color = "Estado da doença cardíaca")+guides(size=FALSE) + xlab("Idade") + ylab("Depressão ST") + ggtitle("Idade versus pressão arterial em repouso separada por condição cardíaca ")
+
+# Pergunta 7: Pressão sanguínea em repouso
+ggplot(df_HDD, aes(x = target1, y = trestbps)) + geom_boxplot() + xlab("Estado da doença cardíaca") + ylab("Pressão sanguínea em repouso") + ggtitle("Boxplots de pressão arterial em repouso por condição cardíaca")
+ggplot(data=df_HDD, aes(x=age, y=trestbps, color=target1, size=factor(oldpeak))) + geom_point(alpha=0.3) + xlab("Idade") + ylab("Açúcar no sangue em repouso ") + labs(color="Estado da doença cardíaca ") + guides(size=FALSE) + ggtitle("Idade vs pressão arterial em repouso vs. condição cardíaca")
